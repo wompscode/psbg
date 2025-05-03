@@ -1,0 +1,5 @@
+{
+  "OutputDirectory": "./output/",
+  "PostDirectory": "./posts/",
+  "TemplateDirectory": "./pages/"
+}
