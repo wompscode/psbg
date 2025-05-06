@@ -1,118 +1,147 @@
-﻿using System.Text.Json;
+﻿#region Imports
+using System.Text.Json;
 using HtmlAgilityPack;
+using static psbg.Structs;
+using static psbg.IO;
+using static psbg.Validation;
+using static psbg.Logging;
 using Markdig;
 using Markdig.Extensions.Yaml;
 using Markdig.Renderers;
 using Markdig.Syntax;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+#endregion
+
+#region ReSharper
+// ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+#endregion
+
+// https://womp.gay/posts/psbg.html for a retrospective on its creation
+
 namespace psbg;
 
-class Program
+internal static class Program
 {
-    // Super unclean single-file initial version
-    struct Config
-    {
-        public string OutputDirectory { get; set; }
-        public string PostDirectory { get; set; }
-        public string TemplateDirectory { get; set; }
-    }
-    
-    struct YamlPostInfo
-    {
-        public string Title;
-        public string Author;
-        public string Date;
-    }
-
-    internal struct PostInfo
-    {
-        public string Title;
-        public string Author;
-        public DateTime Date;
-        public string FileName;
-    }
-    
-    public static List<PostInfo> Posts = new List<PostInfo>();
-    public static string PostListOutput = "";
-    public static string OutputDirectory = "";
-    public static string PostDirectory = "";
-    public static string TemplateDirectory = "";
+    private static readonly List<PostInfo> Posts = new();
+    public static Config Config;
     static void Main(string[] args)
     {
-        Console.WriteLine($"psbg - Phoebe's Static Blog Generator");
+        Log("phoebe's static blog generator", "psbg", ColourScheme.Init);
 
         if (!File.Exists("./config.json"))
         {
-            Console.WriteLine("[fatal] No config.");
+            Log("missing config", "fatal", ColourScheme.Fatal);
             return;
         }
-        Config config = JsonSerializer.Deserialize<Config>(File.ReadAllText("./config.json"));
-        /*OutputDirectory = @"./out/";
-        PostDirectory = @"./posts/";*/
-        PostListOutput = $@"posts.html";
-        OutputDirectory = config.OutputDirectory;
-        if(!Directory.Exists(OutputDirectory))
+        
+        Config = JsonSerializer.Deserialize<Config>(File.ReadAllText("./config.json"));
+        
+        if (Config.Extensions.Length <= 0) Config.Extensions = [".png", ".jpg", ".jpeg", ".txt"];
+        if(!Directory.Exists(Config.OutputDirectory))
         {
-            Console.WriteLine("[warning] Output directory does not exist, creating..");
-            Directory.CreateDirectory(OutputDirectory);
+            Log("output directory doesn't exist, creating..", "warning", ColourScheme.Warning);
+            Directory.CreateDirectory(Config.OutputDirectory);
         }
-        PostDirectory = config.PostDirectory;
-        if(!Directory.Exists(PostDirectory))
+        if(!Directory.Exists(Config.PostDirectory))
         {
-            Console.WriteLine("[fatal] No posts directory.");
+            Log("missing posts..", "fatal", ColourScheme.Fatal);
             return;
         }
-        TemplateDirectory = config.TemplateDirectory;
-        if (!Directory.Exists(TemplateDirectory))
+        if (!Directory.Exists(Config.TemplateDirectory))
         {
-            Console.WriteLine("[fatal] No templates.");
+            Log("no templates.", "fatal", ColourScheme.Fatal);
             return;
+        } 
+        
+        
+        if (args.Length >= 1)
+        {
+            if (!string.IsNullOrEmpty(args[0]))
+            {
+                string arg = args[0];
+                arg = arg.ToLower();
+                if (arg == "validate_pt")
+                {
+                    ValidatePostTemplate("postTemplate.html");
+                    return;
+                }
+
+                if (arg == "validate_pl")
+                {
+                    ValidatePostList("postList.html");
+                    return;
+                }
+
+                if (arg == "validate_all")
+                {
+                    ValidatePostTemplate("postTemplate.html");
+                    ValidatePostList("postList.html");
+                    return;
+                }
+                
+                if (arg == "help")
+                {
+                    Log("validate_pt, validate_pl, validate_all", "help", ColourScheme.Init);
+                    return;
+                }
+            }
         }
-        Console.WriteLine($"[psbg] Converting all .md files in {PostDirectory} to HTML, outputting to {OutputDirectory}.");
-        string[] files = Directory.GetFiles(PostDirectory, "*.md");
+        Log($"converting all .md files in {Config.PostDirectory} to HTML, outputting to {Config.OutputDirectory}", "post-conversion", ColourScheme.Status);
+        string[] files = Directory.GetFiles(Config.PostDirectory, "*.md");
         foreach (string file in files)
         {
             FileInfo fileInfo = new FileInfo(file);
-            Console.WriteLine($"[post-conversion] {fileInfo.Name}");
-            PostMarkdownToPostHtml(file, @$"{Path.Join(OutputDirectory, Path.GetFileNameWithoutExtension(fileInfo.Name) + ".html")}");
+            Log($"{fileInfo.Name}", "post-conversion", ColourScheme.Status);
+            PostMarkdownToPostHtml(file, @$"{Path.Join(Config.OutputDirectory, Path.GetFileNameWithoutExtension(fileInfo.Name) + ".html")}");
         }
-        Console.WriteLine($"[psbg] Creating posts.html, outputting to {OutputDirectory}.");
-        GeneratePostList(Path.Join(OutputDirectory, "posts.html"));
+        
+        Log($"creating posts.html, outputting to {Config.OutputDirectory}", "post-list", ColourScheme.Status);
+        GeneratePostList(Path.Join(Config.OutputDirectory, Config.PostListOutput));
+        
+        Log($"copying all files with extensions listed in config from {Config.PostDirectory} to {Config.OutputDirectory}", "copy-files", ColourScheme.Status);
+        CopyFiles(Config.PostDirectory, Config.OutputDirectory, Config.Extensions);
     }
 
-    public static bool GeneratePostList(string output)
+    private static void GeneratePostList(string output)
     {
-        Posts.Sort((info, postInfo) => DateTime.Compare(info.Date, postInfo.Date));
+        Posts.Sort((info, postInfo) => DateTime.Compare(info.DateTime, postInfo.DateTime));
         Posts.Reverse();
-        var doc = new HtmlDocument();
-        doc.Load(Path.Join(TemplateDirectory, "postList.html"));
-        List<int> years = new List<int>();
         
+        var doc = new HtmlDocument();
+        doc.Load(Path.Join(Config.TemplateDirectory, "postList.html"));
+        if(ValidateLoadedPostListTemplate(doc) == false)
+        {
+            Log($"failed to generate post list, try validating your post list template. (psbg validate_pl)", "fatal", ColourScheme.Fatal);
+            return;
+        }
+
+        List<int> years = new List<int>();
         var list = doc.GetElementbyId("psbg_list");
         foreach (PostInfo post in Posts)
         {
-            if (!years.Contains(post.Date.Year))
+            if (!years.Contains(post.DateTime.Year))
             {
-                var year = HtmlNode.CreateNode($"<h2>{post.Date.Year}</h2>");
-                year.Id = $"psbg_{post.Date.Year}";
+                var year = HtmlNode.CreateNode($"<h2>{post.DateTime.Year}</h2>");
+                year.Id = $"psbg_{post.DateTime.Year}";
                 list.AppendChild(year);
-                years.Add(post.Date.Year);
+                
+                years.Add(post.DateTime.Year);
             }
-            HtmlNode postElement = HtmlNode.CreateNode($"<li><a href=\"{post.FileName}\">{post.Title}</a> - {post.Author} ({post.Date.ToShortDateString()})</li>");
+            HtmlNode postElement = HtmlNode.CreateNode($"<li><a href=\"{post.FileName}\">{post.Title}</a> - {post.Author} ({post.DateTime.ToShortDateString()})</li>");
             list.AppendChild(postElement);
         }
 
         doc.Save(output);
-        return true;
     }
-    
-    public static bool PostMarkdownToPostHtml(string input, string output)
+
+    private static void PostMarkdownToPostHtml(string input, string output)
     {
-        if (!File.Exists(input)) return false;
-        
+        if (!File.Exists(input)) return;
+
         string fileContent = File.ReadAllText(input);
         FileInfo fileInfo = new FileInfo(input);
+        
         var pipeline = new MarkdownPipelineBuilder()
             .UseYamlFrontMatter()
             .Build();
@@ -121,9 +150,10 @@ class Program
         pipeline.Setup(renderer);
 
         MarkdownDocument document = Markdown.Parse(fileContent, pipeline);
+        // Parsing Markdown frontmatter
+        // https://atashbahar.com/post/2020-06-16-extract-front-matter-in-dotnet-with-markdig helped tremendously with this.
         var yamlBlock = document.Descendants<YamlFrontMatterBlock>().FirstOrDefault();
-        var p = new PostInfo();
-        var yp = new YamlPostInfo();
+        PostInfo postInfo = new PostInfo();
         if (yamlBlock != null)
         {
             var deserializer = new DeserializerBuilder()
@@ -131,41 +161,55 @@ class Program
                 .Build();
             string yaml = fileContent.Substring(yamlBlock.Span.Start, yamlBlock.Span.Length);
 
-            yp = deserializer.Deserialize<YamlPostInfo>(yaml.Replace("---", String.Empty));
-            
+            postInfo = deserializer.Deserialize<PostInfo>(yaml.Replace("---", String.Empty));
         }
-        p.Title = string.IsNullOrEmpty(yp.Title) ? "No title." : yp.Title;
-        p.Author = string.IsNullOrEmpty(yp.Author) ? "No author." : yp.Author;
-        p.Date = DateTime.TryParse(yp.Date, out DateTime date) ? date : DateTime.Now;
-        p.FileName = Path.GetFileNameWithoutExtension(fileInfo.Name) + ".html";
-        Posts.Add(p);
+        postInfo.Title = string.IsNullOrEmpty(postInfo.Title) ? "No title." : postInfo.Title;
+        postInfo.Author = string.IsNullOrEmpty(postInfo.Author) ? "No author." : postInfo.Author;
+        postInfo.DateTime = DateTime.TryParse(postInfo.Date, out DateTime date) ? date : DateTime.Now;
+        postInfo.Date = postInfo.DateTime.ToShortDateString();
+        postInfo.FileName = Path.GetFileNameWithoutExtension(fileInfo.Name) + ".html";
+        Posts.Add(postInfo);
         
         renderer.Render(document);
         writer.Flush();
         string markdownContent = writer.ToString();
-        var doc = new HtmlDocument();
-        doc.Load(Path.Join(TemplateDirectory, "postTemplate.html"));
         
-        var pageReturn = doc.GetElementbyId("psbg_goBack");
+        var doc = new HtmlDocument();
+        doc.Load(Path.Join(Config.TemplateDirectory, "postTemplate.html"));
+        
+        HtmlNode pageReturn = doc.GetElementbyId("psbg_goBack");
         if (pageReturn != null)
         {
-            var href = pageReturn.Attributes["href"];
+            HtmlAttribute href = pageReturn.Attributes["href"];
             if (href != null)
             {
-                href.Value = PostListOutput;
-            } 
+                href.Value = Config.PostListOutput;
+            }
+            else
+            {
+                pageReturn.Attributes.Add("href", Config.PostListOutput);
+            }
         }
+        
+        if(ValidateLoadedPostTemplate(doc) == false)
+        {
+            Log($"failed to generate post {postInfo.FileName}, try validating your post template. (psbg validate_pt)", "fatal", ColourScheme.Fatal);
+            Posts.Remove(postInfo);
+            return;
+        }
+        
         var pageTitle = doc.GetElementbyId("psbg_pageTitle");
-        pageTitle.InnerHtml = p.Title;
         var articleTitle = doc.GetElementbyId("psbg_articleTitle");
-        articleTitle.InnerHtml = p.Title;
         var articleDate = doc.GetElementbyId("psbg_articleDate");
-        articleDate.InnerHtml = p.Date.ToShortDateString();
         var articleAuthor = doc.GetElementbyId("psbg_articleAuthor");
-        articleAuthor.InnerHtml = p.Author;
         var articleContent = doc.GetElementbyId("psbg_articleContent");
-        articleContent.InnerHtml = markdownContent;
+
+        if(pageTitle != null) pageTitle.InnerHtml = postInfo.Title;
+        if(articleTitle != null) articleTitle.InnerHtml = postInfo.Title;
+        if(articleDate != null) articleDate.InnerHtml = postInfo.DateTime.ToShortDateString();
+        if(articleAuthor != null) articleAuthor.InnerHtml = postInfo.Author;
+        if(articleContent != null) articleContent.InnerHtml = markdownContent;
+        
         doc.Save(output);
-        return true;
     }
 }

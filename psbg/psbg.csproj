@@ -5,11 +5,14 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <ProductName>psbg</ProductName>
+        <AssemblyTitle>phoebe's static blog generator</AssemblyTitle>
     </PropertyGroup>
 
     <ItemGroup>
       <PackageReference Include="HtmlAgilityPack" Version="1.12.1" />
       <PackageReference Include="Markdig" Version="0.41.1" />
+      <PackageReference Include="Pastel" Version="6.0.1" />
       <PackageReference Include="YamlDotNet" Version="16.3.0" />
     </ItemGroup>
 

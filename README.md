@@ -1,17 +1,16 @@
 # psbg
-Phoebe's Static Blog Generator
-> heads up: psbg is not complete, and prone to change at any point.  
-> keep this in mind when creating templates and posts.  
->   
-> much like any of my tools, psbg is *created for myself first and foremost,* but if you run into issues - do create an issue.
-# Usage
-`dotnet psbg.dll`  
+phoebe's static blog generator
+> heads up: psbg is **not complete**. changes can and **will** happen at any time.  
+> keep this in mind when creating templates, config files and posts.  
 
-Example config.json and templates included in `examples`. Put these files/folders in same directory as `psbg.dll`.  
-Proper documentation will be put together eventually, but for now just read these examples and piece it together.
+# usage
+make posts in your post directory, `dotnet psbg.dll`, copy output in `output` (or whatever your output directory is set to) to whatever hosting solution you want.  
 
-# Current Pitfalls
-psbg *will* just error out and crash if you improperly make a template. Follow the examples.
+example `config.json` and templates included in `examples`. Put these files/folders in same directory as `psbg.dll`. proper documentation will be put together eventually, but for now just read these examples and piece it together.   
 
-# Building
-run `dotnet restore`, then `dotnet build` :thumbsup:
+internal validation is now done, and if your template is broken in a way that would make the article unreadable, it will gracefully fail.  
+there is also verbose validation that can be done by running `psbg validate_all` (list of commands available with `psbg help`).  
+&nbsp;  
+
+# building
+get a .net9 build environment setup, run `dotnet restore`, then `dotnet build` :thumbsup:

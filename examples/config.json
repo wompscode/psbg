@@ -1,5 +1,7 @@
 {
   "OutputDirectory": "./output/",
   "PostDirectory": "./posts/",
-  "TemplateDirectory": "./pages/"
+  "TemplateDirectory": "./pages/",
+  "PostListOutput": "posts.html",
+  "Extensions": [".png", ".jpeg", ".jpg", ".webp", ".webm", ".apng"]
 }
