@@ -11,7 +11,7 @@ make posts in your post directory, `dotnet psbg.dll`, copy output in `output` (o
 example `config.json` and templates included in `examples`. Put these files/folders in same directory as `psbg.dll`. proper documentation will be put together eventually, but for now just read these examples and piece it together.   
 
 internal validation is now done, and if your template is broken in a way that would make the article unreadable, it will gracefully fail.  
-there is also verbose validation that can be done by running `psbg validate_all` (list of commands available with `psbg help`).  
+there is also verbose validation that can be done by running `psbg validate_all` (list of commands available with `psbg help`). you can also skip validation by setting SkipValidation to true in your config, but i advise against that unless you know what you're doing.  
 &nbsp;  
 
 # building

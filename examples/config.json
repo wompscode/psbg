@@ -3,5 +3,6 @@
   "PostDirectory": "./posts/",
   "TemplateDirectory": "./pages/",
   "PostListOutput": "posts.html",
-  "Extensions": [".png", ".jpeg", ".jpg", ".webp", ".webm", ".apng"]
+  "Extensions": [".png", ".jpeg", ".jpg", ".webp", ".webm", ".apng"],
+  "SkipValidation": false
 }

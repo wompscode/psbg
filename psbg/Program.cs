@@ -25,6 +25,7 @@ internal static class Program
 {
     private static readonly List<PostInfo> Posts = new();
     public static Config Config;
+
     static void Main(string[] args)
     {
         Log("phoebe's static blog generator", "psbg", ColourScheme.Init);
@@ -112,8 +113,11 @@ internal static class Program
         doc.Load(Path.Join(Config.TemplateDirectory, "postList.html"));
         if(ValidateLoadedPostListTemplate(doc) == false)
         {
-            Log($"failed to generate post list, try validating your post list template. (psbg validate_pl)", "fatal", ColourScheme.Fatal);
-            return;
+            if (!Config.SkipValidation)
+            {
+                Log($"failed to generate post list, try validating your post list template. (psbg validate_pl)", "fatal", ColourScheme.Fatal);
+                return;  
+            } 
         }
 
         List<int> years = new List<int>();
@@ -128,7 +132,14 @@ internal static class Program
                 
                 years.Add(post.DateTime.Year);
             }
-            HtmlNode postElement = HtmlNode.CreateNode($"<li><a href=\"{post.FileName}\">{post.Title}</a> - {post.Author} ({post.DateTime.ToShortDateString()})</li>");
+
+            string postListSnippet = File.ReadAllText(Path.Join(Config.TemplateDirectory, "postList.snippet"));
+            postListSnippet = postListSnippet.Replace("{{postTitle}}", post.Title)
+                .Replace("{{postAuthor}}", post.Author)
+                .Replace("{{postDateTime}}", post.DateTime.ToShortDateString())
+                .Replace("{{postFileName}}", post.FileName)
+                .Replace("{{postSummary}}", post.Summary);
+            HtmlNode postElement = HtmlNode.CreateNode($"{postListSnippet}");
             list.AppendChild(postElement);
         }
 
@@ -193,9 +204,12 @@ internal static class Program
         
         if(ValidateLoadedPostTemplate(doc) == false)
         {
-            Log($"failed to generate post {postInfo.FileName}, try validating your post template. (psbg validate_pt)", "fatal", ColourScheme.Fatal);
-            Posts.Remove(postInfo);
-            return;
+            if (!Config.SkipValidation)
+            {
+                Log($"failed to generate post {postInfo.FileName}, try validating your post template. (psbg validate_pt)", "fatal", ColourScheme.Fatal);
+                Posts.Remove(postInfo);
+                return;
+            } 
         }
         
         var pageTitle = doc.GetElementbyId("psbg_pageTitle");

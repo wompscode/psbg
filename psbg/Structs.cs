@@ -13,6 +13,7 @@ public class Structs
         public string TemplateDirectory { get; set; }
         public string PostListOutput { get; set; }
         public string[] Extensions { get; set; }
+        public bool SkipValidation { get; set; }
     }
 
     internal record struct PostInfo
@@ -22,6 +23,7 @@ public class Structs
         public string Date;
         public DateTime DateTime;
         public string FileName;
+        public string Summary;
     }
     
     public struct ConsoleColourScheme

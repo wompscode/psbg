@@ -2,6 +2,7 @@
 title: "Example Post"
 author: "Example Author"
 date: "26/4/1986"
+summary: "This is a summary of the example post."
 ---
 
 # This is an example post.
