@@ -138,7 +138,6 @@ public class Template
                         returnValue += postListSnippet;
                     }
                     return returnValue;
-                    break;
                 default:
                     return string.Empty;
             }
