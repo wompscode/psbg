@@ -7,6 +7,7 @@
         <Nullable>enable</Nullable>
         <ProductName>psbg</ProductName>
         <AssemblyTitle>phoebe's static blog generator</AssemblyTitle>
+        <AssemblyVersion>1.1.0.0</AssemblyVersion>
     </PropertyGroup>
 
     <ItemGroup>

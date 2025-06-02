@@ -24,11 +24,9 @@ internal static class Program
 {
     private static readonly List<Post> Posts = new();
     public static Config Config;
-
     static void Main(string[] args)
     {
         Log("phoebe's static blog generator", "psbg", ColourScheme.Init);
-
 
         if (!File.Exists("./config.json"))
         {
@@ -53,7 +51,14 @@ internal static class Program
         {
             Log("no templates.", "fatal", ColourScheme.Fatal);
             return;
-        } 
+        }
+
+        string[] templates = Directory.GetFiles(Config.TemplateDirectory, "*.html", SearchOption.AllDirectories);
+        foreach (string template in templates)
+        {
+            Template temp = new(template);
+            Pool.AddTemplate(temp);
+        }
         
         if (args.Length >= 1)
         {
@@ -108,18 +113,22 @@ internal static class Program
         Posts.Sort((info, postInfo) => DateTime.Compare(info.DateTime, postInfo.DateTime));
         Posts.Reverse();
         
-        string unparsed = File.ReadAllText(Path.Join(Config.TemplateDirectory, "postList.html"));
-        if(ValidateLoadedPostListTemplate(unparsed) == false)
+        Template? template = Pool.GetTemplate("postList.html");
+        if (template == null || template.UnparsedTemplate == null || template.TemplateName == null)
+        {
+            Log($"missing post list template.", "fatal", ColourScheme.Fatal);
+            return;
+        }
+        if(ValidateLoadedPostListTemplate(template.UnparsedTemplate) == false)
         {
             if (!Config.SkipValidation)
             {
                 Log($"failed to generate post list, try validating your post list template. (psbg validate_pl)", "fatal", ColourScheme.Fatal);
             } 
         }
-        unparsed = Template.ParseTemplate(unparsed, Posts);
-        
-        File.WriteAllText(output, unparsed);
 
+        string outputValue = Parser.ParseTemplate(template, "postList.html", Posts, true);
+        File.WriteAllText(output, outputValue);
     }
 
     private static void PostMarkdownToPostHtml(string input, string output)
@@ -162,8 +171,13 @@ internal static class Program
         
         Posts.Add(post);
         
-        string template = File.ReadAllText(Path.Join(Config.TemplateDirectory, "postTemplate.html"));
-        if(ValidateLoadedPostTemplate(template) == false)
+        Template? template = Pool.GetTemplate("postTemplate.html");
+        if (template == null || template.UnparsedTemplate == null || template.TemplateName == null)
+        {
+            Log($"missing post template.", "fatal", ColourScheme.Fatal);
+            return;
+        }
+        if(ValidateLoadedPostTemplate(template.UnparsedTemplate) == false)
         {
             if (!Config.SkipValidation)
             {
@@ -173,7 +187,7 @@ internal static class Program
             } 
         }
 
-        string outputValue = Template.ParseTemplate(template, post);
+        string outputValue = Parser.ParseTemplate(template, "postTemplate.html", post, true);
         File.WriteAllText(output, outputValue);
     }
 }
