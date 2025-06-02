@@ -26,7 +26,7 @@ internal static class Validation
         int warnings = 0;
         int issues = 0;
 
-        string unparsed = Path.Join(Program.Config.TemplateDirectory, "postTemplate.html");
+        string unparsed = File.ReadAllText(Path.Join(Program.Config.TemplateDirectory, "postTemplate.html"));
 
         bool title = unparsed.Contains("{{pageTitle}}");
         bool articleTitle = unparsed.Contains("{{title}}");
@@ -69,7 +69,7 @@ internal static class Validation
         int warnings = 0;
         int issues = 0;
         
-        string unparsed = Path.Join(Program.Config.TemplateDirectory, "postTemplate.html");
+        string unparsed = File.ReadAllText(Path.Join(Program.Config.TemplateDirectory, "postTemplate.html"));
 
         bool posts = unparsed.Contains("{{posts}}");
 
@@ -87,10 +87,10 @@ internal static class Validation
     {
         if (type == "issue")
         {
-            Log($"{template}: missing {element} ("+"{"+element+"}"+")", $"validation: {type}", ColourScheme.Fatal);
+            Log($"{template}: missing {element} ("+"{{"+element+"}}"+")", $"validation: {type}", ColourScheme.Fatal);
         } else if (type == "warning")
         {
-            Log($"{template}: missing {element} ("+"{"+element+"}"+")", $"validation: {type}", ColourScheme.Warning);
+            Log($"{template}: missing {element} ("+"{{"+element+"}}"+")", $"validation: {type}", ColourScheme.Warning);
         }
     }
 }
