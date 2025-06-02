@@ -23,12 +23,13 @@ namespace psbg;
 
 internal static class Program
 {
-    private static readonly List<PostInfo> Posts = new();
+    private static readonly List<Post> Posts = new();
     public static Config Config;
 
     static void Main(string[] args)
     {
         Log("phoebe's static blog generator", "psbg", ColourScheme.Init);
+
 
         if (!File.Exists("./config.json"))
         {
@@ -54,7 +55,6 @@ internal static class Program
             Log("no templates.", "fatal", ColourScheme.Fatal);
             return;
         } 
-        
         
         if (args.Length >= 1)
         {
@@ -110,19 +110,20 @@ internal static class Program
         Posts.Reverse();
         
         var doc = new HtmlDocument();
-        doc.Load(Path.Join(Config.TemplateDirectory, "postList.html"));
+        string unparsed = File.ReadAllText(Path.Join(Config.TemplateDirectory, "postList.html"));
+        unparsed = Template.ParseTemplate(unparsed);
+        doc.LoadHtml(unparsed);
         if(ValidateLoadedPostListTemplate(doc) == false)
         {
             if (!Config.SkipValidation)
             {
                 Log($"failed to generate post list, try validating your post list template. (psbg validate_pl)", "fatal", ColourScheme.Fatal);
-                return;  
             } 
         }
 
         List<int> years = new List<int>();
         var list = doc.GetElementbyId("psbg_list");
-        foreach (PostInfo post in Posts)
+        foreach (Post post in Posts)
         {
             if (!years.Contains(post.DateTime.Year))
             {
@@ -133,12 +134,7 @@ internal static class Program
                 years.Add(post.DateTime.Year);
             }
 
-            string postListSnippet = File.ReadAllText(Path.Join(Config.TemplateDirectory, "postList.snippet"));
-            postListSnippet = postListSnippet.Replace("{{postTitle}}", post.Title)
-                .Replace("{{postAuthor}}", post.Author)
-                .Replace("{{postDateTime}}", post.DateTime.ToShortDateString())
-                .Replace("{{postFileName}}", post.FileName)
-                .Replace("{{postSummary}}", post.Summary);
+            string postListSnippet = Template.ParseTemplate(File.ReadAllText(Path.Join(Config.TemplateDirectory, "postList.snippet")), post);
             HtmlNode postElement = HtmlNode.CreateNode($"{postListSnippet}");
             list.AppendChild(postElement);
         }
@@ -164,7 +160,7 @@ internal static class Program
         // Parsing Markdown frontmatter
         // https://atashbahar.com/post/2020-06-16-extract-front-matter-in-dotnet-with-markdig helped tremendously with this.
         var yamlBlock = document.Descendants<YamlFrontMatterBlock>().FirstOrDefault();
-        PostInfo postInfo = new PostInfo();
+        Post post = new Post();
         if (yamlBlock != null)
         {
             var deserializer = new DeserializerBuilder()
@@ -172,20 +168,21 @@ internal static class Program
                 .Build();
             string yaml = fileContent.Substring(yamlBlock.Span.Start, yamlBlock.Span.Length);
 
-            postInfo = deserializer.Deserialize<PostInfo>(yaml.Replace("---", String.Empty));
+            post = deserializer.Deserialize<Post>(yaml.Replace("---", String.Empty));
         }
-        postInfo.Title = string.IsNullOrEmpty(postInfo.Title) ? "No title." : postInfo.Title;
-        postInfo.Author = string.IsNullOrEmpty(postInfo.Author) ? "No author." : postInfo.Author;
-        postInfo.DateTime = DateTime.TryParse(postInfo.Date, out DateTime date) ? date : DateTime.Now;
-        postInfo.Date = postInfo.DateTime.ToShortDateString();
-        postInfo.FileName = Path.GetFileNameWithoutExtension(fileInfo.Name) + ".html";
-        Posts.Add(postInfo);
+        post.Title = string.IsNullOrEmpty(post.Title) ? "No title." : post.Title;
+        post.Author = string.IsNullOrEmpty(post.Author) ? "No author." : post.Author;
+        post.DateTime = DateTime.TryParse(post.Date, out DateTime date) ? date : DateTime.Now;
+        post.Date = post.DateTime.ToShortDateString();
+        post.FileName = Path.GetFileNameWithoutExtension(fileInfo.Name) + ".html";
+        Posts.Add(post);
         
         renderer.Render(document);
         writer.Flush();
         string markdownContent = writer.ToString();
-        
-        var doc = new HtmlDocument();
+        post.Content = markdownContent;
+
+        /*var doc = new HtmlDocument();
         doc.Load(Path.Join(Config.TemplateDirectory, "postTemplate.html"));
         
         HtmlNode pageReturn = doc.GetElementbyId("psbg_goBack");
@@ -206,8 +203,8 @@ internal static class Program
         {
             if (!Config.SkipValidation)
             {
-                Log($"failed to generate post {postInfo.FileName}, try validating your post template. (psbg validate_pt)", "fatal", ColourScheme.Fatal);
-                Posts.Remove(postInfo);
+                Log($"failed to generate post {post.FileName}, try validating your post template. (psbg validate_pt)", "fatal", ColourScheme.Fatal);
+                Posts.Remove(post);
                 return;
             } 
         }
@@ -218,12 +215,15 @@ internal static class Program
         var articleAuthor = doc.GetElementbyId("psbg_articleAuthor");
         var articleContent = doc.GetElementbyId("psbg_articleContent");
 
-        if(pageTitle != null) pageTitle.InnerHtml = postInfo.Title;
-        if(articleTitle != null) articleTitle.InnerHtml = postInfo.Title;
-        if(articleDate != null) articleDate.InnerHtml = postInfo.DateTime.ToShortDateString();
-        if(articleAuthor != null) articleAuthor.InnerHtml = postInfo.Author;
+        if(pageTitle != null) pageTitle.InnerHtml = post.Title;
+        if(articleTitle != null) articleTitle.InnerHtml = post.Title;
+        if(articleDate != null) articleDate.InnerHtml = post.DateTime.ToShortDateString();
+        if(articleAuthor != null) articleAuthor.InnerHtml = post.Author;
         if(articleContent != null) articleContent.InnerHtml = markdownContent;
-        
         doc.Save(output);
+        */
+        string template = File.ReadAllText(Path.Join(Config.TemplateDirectory, "postTemplate.html"));
+        string outputValue = Template.ParseTemplate(template, post);
+        File.WriteAllText(output, outputValue);
     }
 }

@@ -16,7 +16,7 @@ public class Structs
         public bool SkipValidation { get; set; }
     }
 
-    internal record struct PostInfo
+    public record struct Post
     {
         public string Title;
         public string Author;
@@ -24,6 +24,7 @@ public class Structs
         public DateTime DateTime;
         public string FileName;
         public string Summary;
+        public string Content;
     }
     
     public struct ConsoleColourScheme
