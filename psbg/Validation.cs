@@ -1,5 +1,4 @@
 #region Imports
-using HtmlAgilityPack;
 using static psbg.Logging;
 // ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 #endregion
@@ -7,69 +6,58 @@ namespace psbg;
 
 internal static class Validation
 {
-    public static bool ValidateLoadedPostTemplate(HtmlDocument doc)
+    public static bool ValidateLoadedPostTemplate(string value)
     {
-        // Only checks if the template would be unreadable, not for other issues.
-        var articleTitle = doc.GetElementbyId("psbg_articleTitle");
-        var articleAuthor = doc.GetElementbyId("psbg_articleAuthor");
-        var articleContent = doc.GetElementbyId("psbg_articleContent");
-
-        if (articleTitle == null || articleAuthor == null ||
-            articleContent == null) return false;
+        bool title = value.Contains("{{title}}");
+        bool author = value.Contains("{{author}}");
+        bool date = value.Contains("{{date}}");
+        bool content = value.Contains("{{content}}");
+        
+        if (title == false || author == false || content == false || date == false) return false;
         return true;
     }
 
-    public static bool ValidateLoadedPostListTemplate(HtmlDocument doc)
+    public static bool ValidateLoadedPostListTemplate(string value)
     {
-        var pageReturn = doc.GetElementbyId("psbg_list");
-        if (pageReturn == null) return false;
-        return true;
+        return value.Contains("{{posts}}");
     }
     public static void ValidatePostTemplate(string template)
     {
         int warnings = 0;
         int issues = 0;
-        
-        var doc = new HtmlDocument();
-        doc.Load(Path.Join(Program.Config.TemplateDirectory, "postTemplate.html"));
-        
-        var pageReturn = doc.GetElementbyId("psbg_goBack");
-        var pageTitle = doc.GetElementbyId("psbg_pageTitle");
-        var articleTitle = doc.GetElementbyId("psbg_articleTitle");
-        var articleDate = doc.GetElementbyId("psbg_articleDate");
-        var articleAuthor = doc.GetElementbyId("psbg_articleAuthor");
-        var articleContent = doc.GetElementbyId("psbg_articleContent");
 
-        if (pageReturn == null)
+        string unparsed = Path.Join(Program.Config.TemplateDirectory, "postTemplate.html");
+
+        bool title = unparsed.Contains("{{pageTitle}}");
+        bool articleTitle = unparsed.Contains("{{title}}");
+        bool author = unparsed.Contains("{{author}}");
+        bool date = unparsed.Contains("{{date}}");
+        bool content = unparsed.Contains("{{content}}");
+
+        if (!title)
         {
             warnings++;
-            ValidationOutput(template, "warning", "psbg_goBack", "a");
+            ValidationOutput(template, "warning", "pageTitle", "title");
         }
-
-        if (pageTitle == null)
-        {
-            warnings++;
-            ValidationOutput(template, "warning", "psbg_pageTitle", "title");
-        }
-        if (articleTitle == null)
+        if (!articleTitle)
         {
             issues++;
-            ValidationOutput(template, "issue", "psbg_articleTitle", "h1");
+            ValidationOutput(template, "issue", "title", "h1");
         }
-        if (articleAuthor == null)
+        if (!author)
         {
             warnings++;
-            ValidationOutput(template, "warning", "psbg_articleAuthor", "span");
+            ValidationOutput(template, "warning", "author", "span");
         }
-        if (articleDate == null)
+        if (!date)
         {
             warnings++;
-            ValidationOutput(template, "warning", "psbg_articleDate", "span");
+            ValidationOutput(template, "warning", "date", "span");
         }
-        if (articleContent == null)
+        if (!content)
         {
             issues++;
-            ValidationOutput(template, "issue", "psbg_articleContent", "div");
+            ValidationOutput(template, "issue", "content", "div");
         }
 
         Log($"{template}: {warnings} warning(s), {issues} issue(s).", "validation: complete", ColourScheme.Finish);
@@ -81,16 +69,16 @@ internal static class Validation
         int warnings = 0;
         int issues = 0;
         
-        var doc = new HtmlDocument();
-        doc.Load(Path.Join(Program.Config.TemplateDirectory, "postList.html"));
-        
-        var list = doc.GetElementbyId("psbg_list");
+        string unparsed = Path.Join(Program.Config.TemplateDirectory, "postTemplate.html");
 
-        if (list == null)
+        bool posts = unparsed.Contains("{{posts}}");
+
+        if (!posts)
         {
-            issues++;
-            ValidationOutput(template, "issue", "psbg_list", "ul");
+            warnings++;
+            ValidationOutput(template, "warning", "posts", "title");
         }
+
         Log($"{template}: {warnings} warning(s), {issues} issue(s).", "validation: complete", ColourScheme.Finish);
         Log($"{template}: warnings are not fatal issues, but issues can make articles unreadable.", "validation: complete", ColourScheme.Finish);
     }
@@ -99,10 +87,10 @@ internal static class Validation
     {
         if (type == "issue")
         {
-            Log($"{template}: missing {element} (<{tag} id=\"{element}\"></{tag}>)", $"validation: {type}", ColourScheme.Fatal);
+            Log($"{template}: missing {element} ("+"{"+element+"}"+")", $"validation: {type}", ColourScheme.Fatal);
         } else if (type == "warning")
         {
-            Log($"{template}: missing {element} (<{tag} id=\"{element}\"></{tag}>)", $"validation: {type}", ColourScheme.Warning);
+            Log($"{template}: missing {element} ("+"{"+element+"}"+")", $"validation: {type}", ColourScheme.Warning);
         }
     }
 }

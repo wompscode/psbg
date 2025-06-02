@@ -1,6 +1,5 @@
 ﻿#region Imports
 using System.Text.Json;
-using HtmlAgilityPack;
 using static psbg.Structs;
 using static psbg.IO;
 using static psbg.Validation;
@@ -109,37 +108,18 @@ internal static class Program
         Posts.Sort((info, postInfo) => DateTime.Compare(info.DateTime, postInfo.DateTime));
         Posts.Reverse();
         
-        var doc = new HtmlDocument();
         string unparsed = File.ReadAllText(Path.Join(Config.TemplateDirectory, "postList.html"));
-        unparsed = Template.ParseTemplate(unparsed);
-        doc.LoadHtml(unparsed);
-        if(ValidateLoadedPostListTemplate(doc) == false)
+        if(ValidateLoadedPostListTemplate(unparsed) == false)
         {
             if (!Config.SkipValidation)
             {
                 Log($"failed to generate post list, try validating your post list template. (psbg validate_pl)", "fatal", ColourScheme.Fatal);
             } 
         }
+        unparsed = Template.ParseTemplate(unparsed, Posts);
+        
+        File.WriteAllText(output, unparsed);
 
-        List<int> years = new List<int>();
-        var list = doc.GetElementbyId("psbg_list");
-        foreach (Post post in Posts)
-        {
-            if (!years.Contains(post.DateTime.Year))
-            {
-                var year = HtmlNode.CreateNode($"<h2>{post.DateTime.Year}</h2>");
-                year.Id = $"psbg_{post.DateTime.Year}";
-                list.AppendChild(year);
-                
-                years.Add(post.DateTime.Year);
-            }
-
-            string postListSnippet = Template.ParseTemplate(File.ReadAllText(Path.Join(Config.TemplateDirectory, "postList.snippet")), post);
-            HtmlNode postElement = HtmlNode.CreateNode($"{postListSnippet}");
-            list.AppendChild(postElement);
-        }
-
-        doc.Save(output);
     }
 
     private static void PostMarkdownToPostHtml(string input, string output)
@@ -175,31 +155,15 @@ internal static class Program
         post.DateTime = DateTime.TryParse(post.Date, out DateTime date) ? date : DateTime.Now;
         post.Date = post.DateTime.ToShortDateString();
         post.FileName = Path.GetFileNameWithoutExtension(fileInfo.Name) + ".html";
-        Posts.Add(post);
-        
         renderer.Render(document);
         writer.Flush();
         string markdownContent = writer.ToString();
         post.Content = markdownContent;
-
-        /*var doc = new HtmlDocument();
-        doc.Load(Path.Join(Config.TemplateDirectory, "postTemplate.html"));
         
-        HtmlNode pageReturn = doc.GetElementbyId("psbg_goBack");
-        if (pageReturn != null)
-        {
-            HtmlAttribute href = pageReturn.Attributes["href"];
-            if (href != null)
-            {
-                href.Value = Config.PostListOutput;
-            }
-            else
-            {
-                pageReturn.Attributes.Add("href", Config.PostListOutput);
-            }
-        }
+        Posts.Add(post);
         
-        if(ValidateLoadedPostTemplate(doc) == false)
+        string template = File.ReadAllText(Path.Join(Config.TemplateDirectory, "postTemplate.html"));
+        if(ValidateLoadedPostTemplate(template) == false)
         {
             if (!Config.SkipValidation)
             {
@@ -208,21 +172,7 @@ internal static class Program
                 return;
             } 
         }
-        
-        var pageTitle = doc.GetElementbyId("psbg_pageTitle");
-        var articleTitle = doc.GetElementbyId("psbg_articleTitle");
-        var articleDate = doc.GetElementbyId("psbg_articleDate");
-        var articleAuthor = doc.GetElementbyId("psbg_articleAuthor");
-        var articleContent = doc.GetElementbyId("psbg_articleContent");
 
-        if(pageTitle != null) pageTitle.InnerHtml = post.Title;
-        if(articleTitle != null) articleTitle.InnerHtml = post.Title;
-        if(articleDate != null) articleDate.InnerHtml = post.DateTime.ToShortDateString();
-        if(articleAuthor != null) articleAuthor.InnerHtml = post.Author;
-        if(articleContent != null) articleContent.InnerHtml = markdownContent;
-        doc.Save(output);
-        */
-        string template = File.ReadAllText(Path.Join(Config.TemplateDirectory, "postTemplate.html"));
         string outputValue = Template.ParseTemplate(template, post);
         File.WriteAllText(output, outputValue);
     }
