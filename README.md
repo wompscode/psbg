@@ -1,7 +1,9 @@
 # psbg
 phoebe's static blog generator
 > heads up: psbg is **not complete, very janky, and very much designed around my own wants and needs.** changes can and **will** happen at any time.  
-> keep this in mind when creating templates, config files and posts.
+> 
+> keep this in mind when creating templates, config files and posts. you should 100% consider using any other stable static site generator (it's even likely that eventually, once i get sick of working on this that even i'll move to something else.)  
+> 
 > notices of changes are in [notices/](notices/).
 # usage
 > currently no builds are provided, so you'll need to build psbg yourself. i'll setup github actions for building cutting edge releases soon.
