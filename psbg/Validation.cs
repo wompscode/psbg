@@ -1,4 +1,6 @@
 #region Imports
+
+using System.Text.RegularExpressions;
 using static psbg.Logging;
 // ReSharper disable ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
 #endregion
@@ -8,6 +10,8 @@ internal static class Validation
 {
     public static bool ValidateLoadedPostTemplate(string value)
     {
+        return true;
+        if (Program.Config.SkipValidation) return true;
         bool title = value.Contains("{{title}}");
         bool author = value.Contains("{{author}}");
         bool date = value.Contains("{{date}}");
@@ -19,8 +23,11 @@ internal static class Validation
 
     public static bool ValidateLoadedPostListTemplate(string value)
     {
+        return true;
+        if (Program.Config.SkipValidation) return true;
         return value.Contains("{{posts}}");
     }
+
     public static void ValidatePostTemplate(string template)
     {
         int warnings = 0;
@@ -69,7 +76,7 @@ internal static class Validation
         int warnings = 0;
         int issues = 0;
         
-        string unparsed = File.ReadAllText(Path.Join(Program.Config.TemplateDirectory, "postTemplate.html"));
+        string unparsed = File.ReadAllText(Path.Join(Program.Config.TemplateDirectory, "postList.html"));
 
         bool posts = unparsed.Contains("{{posts}}");
 

@@ -11,7 +11,9 @@ make posts in your post directory, `dotnet psbg.dll`, copy output in `output` (o
 example `config.json` and templates included in `examples`. Put these files/folders in same directory as `psbg.dll`. proper documentation will be put together eventually, but for now just read these examples and piece it together.   
 
 internal validation is now done, and if your template is broken in a way that would make the article unreadable, it will gracefully fail.  
-there is also verbose validation that can be done by running `psbg validate_all` (list of commands available with `psbg help`). you can also skip validation by setting SkipValidation to true in your config, but i advise against that unless you know what you're doing.
+there is also verbose validation that can be done by running `psbg validate_all` (list of commands available with `psbg help`). you can also skip validation by setting SkipValidation to true in your config. you should do this if your page structure is not similar to the example ones. (it is intended to match how my pages are structured.)  
+
+validation needs to be redone to match how parsing functions now: it does not validate recursively. i will fix this eventually, but for now you should just skip validation if it becomes an issue for you. [validation is automatically skipped currently: upon fix it will be reenabled unless the config flag `SkipValidation` is true.]
 &nbsp;  
 # building
 get a .net9 build environment setup, run `dotnet restore`, then `dotnet build` :thumbsup:
